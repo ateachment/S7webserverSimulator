@@ -1,0 +1,21 @@
+<!-- AWP_In_Variable Name='"Datenbaustein_Motorschaltung".WebStart' -->
+<!-- AWP_In_Variable Name='"Datenbaustein_Motorschaltung".WebStop' -->
+<!DOCTYPE html>
+  <html>     
+    <head>
+      <meta charset="utf-8">
+      <title>Motorsteuerung</title>
+    </head>
+  <body>
+	Motorschütz :="Motorschütz": 
+    Motorschutzschalter :="Motorschutzschalter":
+	<form method="post">
+		<input hidden name='"Datenbaustein_Motorschaltung".WebStart' type="text" value="1"/>
+		<input type="submit" value="Start">
+    </form>
+	<form method="post">
+		<input hidden name='"Datenbaustein_Motorschaltung".WebStop' type="text" value="0"/>
+		<input type="submit" value="Stop">
+    </form>
+  </body>
+</html>

@@ -1,0 +1,75 @@
+# Python 3 server example
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import re
+import json
+
+hostName = "localhost"
+serverPort = 80
+htmlFile = "index.html"
+
+class MyServer(BaseHTTPRequestHandler):
+
+    def __readVariables(self):
+        self.__variables = {}              # initialize an empty dictionary for variables
+        with open("variables.json", "r", encoding='utf-8') as file:
+                self.__variables = json.load(file)
+                print(self.__variables)
+
+    def _set_headers(self):      
+        self.send_response(200)
+        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.end_headers()
+
+    def __response(self):
+        self._set_headers()
+        # Open the html file in read mode
+        with open(htmlFile, "r", encoding='utf-8') as file:
+            # Read each line in the file
+            for line in file:
+                # parse line and find variables
+                matches = re.findall(r':="(.*?)":', line)   # regular expression matches everything between :=" and ":
+                if len(matches) > 0:                        # replace each match: :="variable": by value
+                    for match in matches:
+                        variable = match
+                        value = self.__variables[variable]
+                        line = line.replace(':="' + variable + '":', value)
+                # send each line
+                self.wfile.write(bytes(line, "utf-8"))
+
+    def do_GET(self):
+        self.__readVariables()
+        self.__response()
+    
+    def do_POST(self):       
+        self.__readVariables()
+        content_length = int(self.headers['Content-Length'])
+        input = bytes.decode(self.rfile.read(content_length))   # %22Datenbaustein_Motorschaltung%22.WebStart=1 or
+                                                                # %22Datenbaustein_Motorschaltung%22.WebStop=0
+        print(input)
+        # logic user programm - motor control with self-holding
+
+        if input == "%22Datenbaustein_Motorschaltung%22.WebStart=1" and self.__variables["Motorschutzschalter"] == '1':
+            self.__variables["Motorschütz"] = '1'
+        if input == "%22Datenbaustein_Motorschaltung%22.WebStop=0":
+            self.__variables["Motorschütz"] = '0'
+            print("222")
+
+        print(self.__variables)
+
+        with open('variables.json','w', encoding='utf8') as file:
+            json.dump(self.__variables, file, ensure_ascii=False)
+
+        self.__response()
+
+
+if __name__ == "__main__":        
+    webServer = HTTPServer((hostName, serverPort), MyServer)
+    print("Server started http://%s:%s" % (hostName, serverPort))
+
+    try:
+        webServer.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+    webServer.server_close()
+    print("Server stopped.")
