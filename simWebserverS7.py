@@ -52,7 +52,6 @@ class MyServer(BaseHTTPRequestHandler):
             self.__variables["Motorschütz"] = '1'
         if input == "%22Datenbaustein_Motorschaltung%22.WebStop=0":
             self.__variables["Motorschütz"] = '0'
-            print("222")
 
         print(self.__variables)
 
