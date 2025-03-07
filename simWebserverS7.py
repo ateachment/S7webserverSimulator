@@ -33,22 +33,30 @@ class HttpRequestHandler(BaseHTTPRequestHandler):
         self._set_headers()
         # Open the html file in read mode
         print(self.path)
+        file_extension = self.path.split('.')[-1]
         try:
-            with open(web_dir + self.path, "r", encoding='utf-8') as (file):
-                # Read each line in the file
-                for line in file:
-                    # parse line and find variables
-                    matches = re.findall(r':="(.*?)":', line)   # regular expression matches everything between :=" and ":
-                    if len(matches) > 0:                        # replace each match: :="variable": by value
-                        for match in matches:
-                            variable = match
-                            value = self.__variables[variable]
-                            line = line.replace(':="' + variable + '":', value)
-                    # send each line
-                    self.wfile.write(bytes(line, "utf-8"))
+            if file_extension in ["htm", "html"]:                   # parse html files only for SIEMENS variables
+                with open(web_dir + self.path, "r", encoding='utf-8') as (file):
+                    # Read each line in the file
+                    for line in file:
+                        # parse line and find variables
+                        matches = re.findall(r':="(.*?)":', line)   # regular expression matches everything between :=" and ":
+                        if len(matches) > 0:                        # replace each match: :="variable": by value
+                            for match in matches:
+                                variable = match
+                                value = self.__variables[variable]
+                                line = line.replace(':="' + variable + '":', value)
+                        # send each line
+                        self.wfile.write(bytes(line, "utf-8"))
+            else:                                                   # serve other files without parsing
+                with open(web_dir + self.path, "rb") as (file):
+                    print("test")
+                    self.wfile.write(file.read())
+
         except FileNotFoundError:
             self.send_error(404) # file not found
-        except Exception:
+        except Exception as e:
+            print(e)
             self.send_error(500) # internal server error
 
     def do_GET(self):
