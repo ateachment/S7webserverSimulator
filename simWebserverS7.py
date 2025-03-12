@@ -1,4 +1,3 @@
-# Python 3 server example
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import re
 import json
@@ -13,14 +12,14 @@ class HttpRequestHandler(BaseHTTPRequestHandler):
         self.__variables = {}              # initialize an empty dictionary for variables
         with open("variables.json", "r", encoding='utf-8') as file:
             self.__variables = json.load(file)
-            print(self.__variables)
+            print("Read variables: " + str(self.__variables))
 
     def __writeVariables(self):
         # logic of user programm - motor control with self-holding
         if self.__variables["Motorschutzschalter"] == '0':
             self.__variables["Motorschütz"] = '0'
         
-        print(self.__variables)
+        print("Write variables: " + str(self.__variables))
         with open('variables.json','w', encoding='utf8') as file:
             json.dump(self.__variables, file, ensure_ascii=False)
 
@@ -30,12 +29,12 @@ class HttpRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def __response(self):
-        self._set_headers()
         # Open the html file in read mode
-        print(self.path)
-        file_extension = self.path.split('.')[-1]
+        print("path="+self.path)
+        file_extension = self.path.split('.')[-1]                   # get file extension
         try:
-            if file_extension in ["htm", "html"]:                   # parse html files only for SIEMENS variables
+            output = bytearray()
+            if file_extension in ["htm", "html", "io"]:                   # parse html files only for SIEMENS variables
                 with open(web_dir + self.path, "r", encoding='utf-8') as (file):
                     # Read each line in the file
                     for line in file:
@@ -46,11 +45,12 @@ class HttpRequestHandler(BaseHTTPRequestHandler):
                                 variable = match
                                 value = self.__variables[variable]
                                 line = line.replace(':="' + variable + '":', value)
-                        # send each line
-                        self.wfile.write(bytes(line, "utf-8"))
+                        # buffer each line
+                        output += bytes(line, "utf-8")     
+                self._set_headers()
+                self.wfile.write(output)
             else:                                                   # serve other files without parsing
                 with open(web_dir + self.path, "rb") as (file):
-                    print("test")
                     self.wfile.write(file.read())
 
         except FileNotFoundError:
