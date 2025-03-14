@@ -1,4 +1,4 @@
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import re
 import json
 import os
@@ -7,7 +7,7 @@ hostName = "localhost"
 serverPort = 80
 web_dir = os.path.join(os.path.dirname(__file__), 'htdocs')
 
-class HttpRequestHandler(SimpleHTTPRequestHandler):
+class HttpRequestHandler(BaseHTTPRequestHandler):
     def __readVariables(self):
         self.__variables = {}              # initialize an empty dictionary for variables
         with open("variables.json", "r", encoding='utf-8') as file:
@@ -32,7 +32,7 @@ class HttpRequestHandler(SimpleHTTPRequestHandler):
         try:
             print("path="+self.path)
             if self.path[-1] == '/':               # path is directory
-                # check if default file is available
+                # check if a default file is available
                 directoryContent = os.listdir(web_dir + self.path)
                 common = set(directoryContent) & set(['index.html','index.htm'])
                 if common:
@@ -47,15 +47,20 @@ class HttpRequestHandler(SimpleHTTPRequestHandler):
                 with open(web_dir + self.path, "r", encoding='utf-8') as (file):
                     # Read each line in the file
                     for line in file:
-                        # parse line and find variables
-                        matches = re.findall(r':="(.*?)":', line) # regular expression matches everything between :=" and ":
-                        if len(matches) > 0:                      # replace each match: :="variable": by value
-                            for match in matches:
-                                variable = match
-                                value = self.__variables[variable]
-                                line = line.replace(':="' + variable + '":', value)
-                        # buffer each line
-                        output += bytes(line, "utf-8")     
+                        # parse line and remove AWP variable declarations
+                        hits = re.findall(r'<!--\s?AWP_In_Variable\s?Name=.*?-->', line)
+                        if len(hits) == 0:
+                            # parse line and find variables
+                            matches = re.findall(r':="(.*?)":', line) # regular expression matches everything between :=" and ":
+                            if len(matches) > 0:                      # replace each match: :="variable": by value
+                                for match in matches:
+                                    variable = match
+                                    value = self.__variables[variable]
+                                    line = line.replace(':="' + variable + '":', value)
+                            # buffer each line
+                            output += bytes(line, "utf-8")   
+                        else:
+                            output += bytes("\n", "utf-8")
                 self._set_headers()
                 self.wfile.write(output)
             else:                                                   # serve other files without parsing
