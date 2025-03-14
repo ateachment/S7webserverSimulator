@@ -1,4 +1,4 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 import re
 import json
 import os
@@ -7,7 +7,7 @@ hostName = "localhost"
 serverPort = 80
 web_dir = os.path.join(os.path.dirname(__file__), 'htdocs')
 
-class HttpRequestHandler(BaseHTTPRequestHandler):
+class HttpRequestHandler(SimpleHTTPRequestHandler):
     def __readVariables(self):
         self.__variables = {}              # initialize an empty dictionary for variables
         with open("variables.json", "r", encoding='utf-8') as file:
@@ -29,18 +29,27 @@ class HttpRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def __response(self):
-        # Open the html file in read mode
-        print("path="+self.path)
-        file_extension = self.path.split('.')[-1]                   # get file extension
         try:
+            print("path="+self.path)
+            if self.path[-1] == '/':               # path is directory
+                # check if default file is available
+                directoryContent = os.listdir(web_dir + self.path)
+                common = set(directoryContent) & set(['index.html','index.htm'])
+                if common:
+                    default_file = common.pop()
+                    self.path += default_file      # assign default file
+                else: 
+                    raise FileNotFoundError() 
+                
+            file_extension = self.path.split('.')[-1]             # get file extension
             output = bytearray()
-            if file_extension in ["htm", "html", "io"]:                   # parse html files only for SIEMENS variables
+            if file_extension in ["htm", "html", "io"]:           # parse html files only for SIEMENS variables
                 with open(web_dir + self.path, "r", encoding='utf-8') as (file):
                     # Read each line in the file
                     for line in file:
                         # parse line and find variables
-                        matches = re.findall(r':="(.*?)":', line)   # regular expression matches everything between :=" and ":
-                        if len(matches) > 0:                        # replace each match: :="variable": by value
+                        matches = re.findall(r':="(.*?)":', line) # regular expression matches everything between :=" and ":
+                        if len(matches) > 0:                      # replace each match: :="variable": by value
                             for match in matches:
                                 variable = match
                                 value = self.__variables[variable]
